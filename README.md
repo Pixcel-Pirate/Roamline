@@ -26,7 +26,7 @@ No accounts, no payments, no tracking. Fresh remote and hybrid jobs from free pu
 
 ## How it works
 
-- `fetch_jobs.py` pulls remote and hybrid jobs once a day from free sources: Remote OK, Remotive, Himalayas, Arbeitnow, Jobicy, The Muse, We Work Remotely, Adzuna and USAJOBS (with free keys), and public company career pages on Greenhouse, Lever and Ashby (listed in `companies.json`). It drops anything older than 30 days or without a safe link, removes duplicates and writes `docs/jobs.json`. Python stdlib only.
+- `fetch_jobs.py` pulls remote and hybrid jobs once a day from free sources: Remote OK, Remotive, Himalayas, Arbeitnow, Jobicy, We Work Remotely, Adzuna and USAJOBS (with free keys), and public company career pages on Greenhouse, Lever and Ashby (listed in `companies.json`). It drops anything older than 30 days or without a safe link, removes duplicates and writes `docs/jobs.json`. Python stdlib only.
 - `docs/` is a static page (search, source and age filters, salary-only, saved jobs in your browser). It renders with `textContent`, never `innerHTML`, and has a strict Content-Security-Policy.
 - `.github/workflows/update-jobs.yml` runs the tests and the fetcher daily and deploys the page to GitHub Pages. `test.yml` runs the tests on every pull request, and Dependabot keeps the pinned actions updated.
 
