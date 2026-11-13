@@ -18,6 +18,7 @@ import re
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -299,9 +300,15 @@ def src_cursor(base, parse, pages):
 
 
 def src_muse():
+    # The Muse 404s on its location filter, so pull recent pages and keep remote/hybrid ones.
     out = []
-    for page in range(1, 11):
-        data = get_json(f"https://www.themuse.com/api/public/jobs?page={page}&location=Flexible%20%2F%20Remote")
+    for page in range(1, 21):
+        try:
+            data = get_json(f"https://www.themuse.com/api/public/jobs?page={page}")
+        except urllib.error.HTTPError as e:
+            if e.code == 404 and page > 1:  # ran past the last page
+                break
+            raise
         out += from_muse(data)
         if page >= (number(data.get("page_count")) or 0):
             break
