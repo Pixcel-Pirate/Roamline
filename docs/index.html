@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Roamline</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Roamline</h1>
+  <p>Free remote jobs, refreshed daily. No account, no card, no charges.</p>
+</header>
+
+<main>
+  <form id="filters" role="search">
+    <label>Search
+      <input id="q" type="search" placeholder="title, company, skill" autocomplete="off">
+    </label>
+    <label>Source
+      <select id="source"><option value="">All sources</option></select>
+    </label>
+    <label>Posted
+      <select id="age">
+        <option value="30">Last 30 days</option>
+        <option value="7">Last 7 days</option>
+        <option value="2">Last 2 days</option>
+      </select>
+    </label>
+    <label class="check"><input id="paid" type="checkbox"> Shows salary</label>
+    <label class="check"><input id="saved" type="checkbox"> Saved only</label>
+  </form>
+
+  <p id="status" aria-live="polite">Loading jobs…</p>
+  <ul id="jobs"></ul>
+</main>
+
+<footer>
+  Jobs come from
+  <a href="https://remoteok.com">Remote OK</a>,
+  <a href="https://remotive.com">Remotive</a>,
+  <a href="https://himalayas.app">Himalayas</a> and
+  <a href="https://www.arbeitnow.com">Arbeitnow</a>.
+  Every listing links back to its source. Apply on the original site, and never pay a "recruiter" to get hired.
+</footer>
+
+<template id="card">
+  <li class="job">
+    <div class="top">
+      <a class="title" target="_blank" rel="noopener"></a>
+      <button type="button" class="save" aria-pressed="false">Save</button>
+    </div>
+    <p class="meta"></p>
+    <p class="tags"></p>
+  </li>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
