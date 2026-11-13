@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Roamline Autofill",
+  "version": "0.1.0",
+  "description": "Fills job applications from a profile stored only in your browser. You always review and submit yourself.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "action": { "default_title": "Roamline Autofill", "default_popup": "popup.html" },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.myworkdayjobs.com/*"
+      ],
+      "js": ["fill.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

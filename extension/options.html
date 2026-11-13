@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roamline Autofill – My profile</title>
+<link rel="stylesheet" href="ext.css">
+</head>
+<body>
+<main>
+  <h1>My application profile</h1>
+  <p class="hint">Saved only in this browser. It is never sent anywhere. Roamline fills forms when you press the button and never submits for you.</p>
+
+  <form id="profile">
+    <fieldset>
+      <legend>Contact</legend>
+      <label>First name <input name="firstName" autocomplete="given-name"></label>
+      <label>Last name <input name="lastName" autocomplete="family-name"></label>
+      <label>Email <input name="email" type="email" autocomplete="email"></label>
+      <label>Phone <input name="phone" type="tel" autocomplete="tel"></label>
+      <label>City, State <input name="location" autocomplete="address-level2"></label>
+      <label>LinkedIn URL <input name="linkedin" type="url" placeholder="https://www.linkedin.com/in/..."></label>
+      <label>Website / portfolio <input name="website" type="url" placeholder="https://"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Resume</legend>
+      <label>Resume file (PDF or Word, up to 5 MB) <input id="resume" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+      <p id="resume-name" class="hint"></p>
+      <button type="button" id="remove-resume" class="ghost">Remove resume</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Work eligibility</legend>
+      <label>Legally authorized to work in the US?
+        <select name="authorized"><option value="">Leave blank</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label>Need visa sponsorship now or in the future?
+        <select name="sponsorship"><option value="">Leave blank</option><option value="no">No</option><option value="yes">Yes</option></select></label>
+      <label>US citizen?
+        <select name="citizen"><option value="">Leave blank</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Voluntary self-identification</legend>
+      <p class="hint">Employers must not use these to decide on your application. "Prefer not to say" is always fine.</p>
+      <label>Gender
+        <select name="gender"><option value="decline">Prefer not to say</option><option value="male">Male</option><option value="female">Female</option><option value="non binary">Non-binary</option></select></label>
+      <label>Hispanic or Latino?
+        <select name="hispanic"><option value="decline">Prefer not to say</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label>Race
+        <select name="race"><option value="decline">Prefer not to say</option><option value="american indian">American Indian or Alaska Native</option><option value="asian">Asian</option><option value="black">Black or African American</option><option value="hawaiian">Native Hawaiian or Other Pacific Islander</option><option value="white">White</option><option value="two or more">Two or more races</option></select></label>
+      <label>Protected veteran?
+        <select name="veteran"><option value="decline">Prefer not to say</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+      <label>Disability?
+        <select name="disability"><option value="decline">Prefer not to say</option><option value="yes">Yes</option><option value="no">No</option></select></label>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit">Save profile</button>
+      <button type="button" id="export" class="ghost">Export (JSON)</button>
+      <button type="button" id="delete" class="danger">Delete everything</button>
+    </div>
+    <p id="msg" role="status" aria-live="polite"></p>
+  </form>
+</main>
+<script src="options.js"></script>
+</body>
+</html>
