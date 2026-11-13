@@ -12,7 +12,6 @@ const SOURCE_HOME = {
   Himalayas: "https://himalayas.app",
   Arbeitnow: "https://www.arbeitnow.com",
   Jobicy: "https://jobicy.com",
-  "The Muse": "https://www.themuse.com",
   "We Work Remotely": "https://weworkremotely.com",
   Adzuna: "https://www.adzuna.com",
   USAJOBS: "https://www.usajobs.gov",

@@ -18,7 +18,6 @@ import re
 import sys
 import tempfile
 import time
-import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -189,18 +188,6 @@ def from_jobicy(data):
     ]
 
 
-def from_muse(data):
-    out = []
-    for j in data.get("results", []):
-        locs = ", ".join(text(l.get("name")) for l in j.get("locations") or [] if isinstance(l, dict))
-        kind = work_type(locs, default=None)
-        if kind:
-            out.append(job("The Muse", j.get("name"), (j.get("company") or {}).get("name"), locs,
-                           [c.get("name") for c in j.get("categories") or [] if isinstance(c, dict)], "",
-                           (j.get("refs") or {}).get("landing_page"), j.get("publication_date"), kind))
-    return out
-
-
 def from_wwr(xml_bytes):
     # ponytail: stdlib XML parser; modern expat blocks entity-expansion bombs.
     out = []
@@ -299,22 +286,6 @@ def src_cursor(base, parse, pages):
     return run
 
 
-def src_muse():
-    # The Muse 404s on its location filter, so pull recent pages and keep remote/hybrid ones.
-    out = []
-    for page in range(1, 21):
-        try:
-            data = get_json(f"https://www.themuse.com/api/public/jobs?page={page}")
-        except urllib.error.HTTPError as e:
-            if e.code == 404 and page > 1:  # ran past the last page
-                break
-            raise
-        out += from_muse(data)
-        if page >= (number(data.get("page_count")) or 0):
-            break
-    return out
-
-
 def src_wwr():
     return from_wwr(fetch("https://weworkremotely.com/remote-jobs.rss", {"Accept": "application/rss+xml"}))
 
@@ -380,7 +351,6 @@ SOURCES = [
     ("Himalayas", src_cursor("https://himalayas.app/jobs/api?limit=20", from_himalayas, 15)),
     ("Arbeitnow", src_simple("https://www.arbeitnow.com/api/job-board-api", from_arbeitnow)),
     ("Jobicy", src_cursor("https://jobicy.com/api/jobs?count=100", from_jobicy, 5)),
-    ("The Muse", src_muse),
     ("We Work Remotely", src_wwr),
     ("Adzuna", src_adzuna),
     ("USAJOBS", src_usajobs),

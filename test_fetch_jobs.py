@@ -65,14 +65,6 @@ class NewSources(unittest.TestCase):
         j = fj.from_wwr(xml)[0]
         self.assertEqual((j["company"], j["title"], j["posted"][:10]), ("Acme", "Backend Dev", "2026-11-13"))
 
-    def test_muse_keeps_only_remote(self):
-        data = {"results": [
-            {"name": "A", "company": {"name": "C"}, "locations": [{"name": "Flexible / Remote"}],
-             "publication_date": "2026-11-10T00:00:00Z", "refs": {"landing_page": "https://themuse.com/a"}},
-            {"name": "B", "company": {"name": "C"}, "locations": [{"name": "Chicago, IL"}],
-             "publication_date": "2026-11-10T00:00:00Z", "refs": {"landing_page": "https://themuse.com/b"}}]}
-        self.assertEqual([j["title"] for j in fj.from_muse(data)], ["A"])
-
     def test_adzuna_coords_and_hybrid(self):
         data = {"results": [{"title": "Analyst (Hybrid)", "company": {"display_name": "X"},
                              "location": {"display_name": "Austin, TX"}, "latitude": 30.27, "longitude": -97.74,
@@ -106,23 +98,6 @@ class NewSources(unittest.TestCase):
         ashby = {"jobs": [{"title": "Eng", "location": "NYC", "isRemote": True, "workplaceType": "Remote",
                            "jobUrl": "https://jobs.ashbyhq.com/ramp/1", "publishedAt": "2026-11-01T00:00:00Z"}]}
         self.assertEqual(fj.from_ashby("ramp", ashby)[0]["type"], "remote")
-
-    def test_muse_stops_at_404_and_keeps_earlier_pages(self):
-        import urllib.error
-        page1 = {"page_count": 5, "results": [
-            {"name": "A", "company": {"name": "C"}, "locations": [{"name": "Flexible / Remote"}],
-             "publication_date": "2026-11-10T00:00:00Z", "refs": {"landing_page": "https://themuse.com/a"}}]}
-
-        def fake(url, headers=None):
-            if url.endswith("page=1"):
-                return page1
-            raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
-        saved = fj.get_json
-        fj.get_json = fake
-        try:
-            self.assertEqual([j["title"] for j in fj.src_muse()], ["A"])
-        finally:
-            fj.get_json = saved
 
     def test_settings_validates_zips_and_radius(self):
         self.assertEqual(fj.settings({"SEARCH_ZIPS": "10001, 9410, abcde,94103;x", "SEARCH_RADIUS_MILES": "500"}),
