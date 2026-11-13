@@ -124,7 +124,30 @@ def work_type(*texts, default=None):
     return default
 
 
-def job(source, title, company, location, tags, pay, url, posted, kind="remote", lat=None, lon=None):
+LEVELS = [  # checked in order; first match wins, so "Senior Director" is lead
+    # not "executive": "Account Executive" is a sales role, not leadership
+    ("lead", re.compile(r"\b(lead(?! gen)|principal|staff (?:engineer|software|data|product|designer|scientist|developer)|head of|director|vp|vice president|chief)\b")),
+    ("senior", re.compile(r"\b(senior|sr|iii|iv)\b")),
+    ("entry", re.compile(r"\b(junior|jr|entry|intern|internship|graduate|grad|trainee|apprentice|associate)\b"
+                         r"|\b(engineer|developer|analyst|specialist|designer) i\b")),
+    ("mid", re.compile(r"\b(mid|intermediate|ii)\b")),
+]
+
+
+def level_of(title, hints=None):
+    """Guess entry/mid/senior/lead from the title, then from a source's own level labels."""
+    hint_blob = " ".join(text(h, 40) for h in hints) if isinstance(hints, list) else ""
+    for blob in (text(title, 300), hint_blob):
+        blob = blob.lower().replace("-", " ").replace(".", " ")
+        for name, pattern in LEVELS:
+            if pattern.search(blob):
+                return name
+    if "executive" in hint_blob.lower():  # a source's own "Executive" level label
+        return "lead"
+    return ""
+
+
+def job(source, title, company, location, tags, pay, url, posted, kind="remote", lat=None, lon=None, level_hints=None):
     j = {
         "title": text(title),
         "company": text(company),
@@ -135,6 +158,7 @@ def job(source, title, company, location, tags, pay, url, posted, kind="remote",
         "source": source,
         "posted": posted if isinstance(posted, str) else None,
         "type": kind if kind in ("remote", "hybrid") else "remote",
+        "level": level_of(title, level_hints),
     }
     lat, lon = coord(lat, 90), coord(lon, 180)
     if lat is not None and lon is not None:
@@ -166,7 +190,8 @@ def from_himalayas(data):
         job("Himalayas", j.get("title"), j.get("companyName"),
             ", ".join(map(text, j.get("locationRestrictions") or [])), j.get("categories"),
             salary(j.get("minSalary"), j.get("maxSalary"), j.get("currency"), j.get("salaryPeriod")),
-            j.get("applicationLink") or j.get("guid"), iso(j.get("pubDate")))
+            j.get("applicationLink") or j.get("guid"), iso(j.get("pubDate")),
+            level_hints=j.get("seniority"))
         for j in data.get("jobs", [])
     ]
 
@@ -186,6 +211,15 @@ def from_jobicy(data):
             j.get("url"), j.get("pubDate"))
         for j in data.get("jobs", [])
     ]
+
+
+def from_working_nomads(data):
+    return [
+        job("Working Nomads", j.get("title"), j.get("company_name"), j.get("location"),
+            [t for t in text(j.get("tags"), 300).split(",")][:5] + [j.get("category_name")], "",
+            j.get("url"), j.get("pub_date"))
+        for j in data if isinstance(j, dict)
+    ] if isinstance(data, list) else []
 
 
 def from_wwr(xml_bytes):
@@ -352,6 +386,7 @@ SOURCES = [
     ("Arbeitnow", src_simple("https://www.arbeitnow.com/api/job-board-api", from_arbeitnow)),
     ("Jobicy", src_cursor("https://jobicy.com/api/jobs?count=100", from_jobicy, 5)),
     ("We Work Remotely", src_wwr),
+    ("Working Nomads", src_simple("https://www.workingnomads.com/api/exposed_jobs/", from_working_nomads)),
     ("Adzuna", src_adzuna),
     ("USAJOBS", src_usajobs),
     ("Company sites", src_company_boards),
