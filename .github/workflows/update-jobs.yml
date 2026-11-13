@@ -8,8 +8,8 @@ on:
     branches: [main]
     paths: ["fetch_jobs.py", "test_fetch_jobs.py"]
 
-permissions:
-  contents: write
+# Least privilege: nothing by default; only the job that commits gets write.
+permissions: {}
 
 concurrency:
   group: update-jobs
@@ -19,6 +19,8 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Test

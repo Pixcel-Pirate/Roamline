@@ -14,45 +14,61 @@ from datetime import datetime, timedelta, timezone
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", "jobs.json")
 MAX_AGE_DAYS = 30
 UA = "Roamline/1.0 (personal job search)"
+MAX_BYTES = 30_000_000  # a sane API response is a few MB; refuse anything absurd
 
 
 def get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
+        body = resp.read(MAX_BYTES + 1)
+    if len(body) > MAX_BYTES:
+        raise ValueError(f"response larger than {MAX_BYTES} bytes")
+    return json.loads(body)
+
+
+def text(v, limit=200):
+    """API value -> trimmed string. Anything that isn't a string becomes ''."""
+    return v.strip()[:limit] if isinstance(v, str) else ""
+
+
+def number(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 else 0
 
 
 def iso(ts):
     """Unix seconds -> ISO date string, or None."""
-    if not isinstance(ts, (int, float)) or ts <= 0:
+    if not number(ts):
         return None
-    return datetime.fromtimestamp(ts, timezone.utc).isoformat()
+    try:
+        return datetime.fromtimestamp(ts, timezone.utc).isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
 
 
 def salary(lo, hi, currency=""):
-    lo, hi = lo or 0, hi or 0
+    lo, hi = number(lo), number(hi)
     if not lo and not hi:
         return ""
-    cur = f"{currency} " if currency else "$"
+    cur = f"{text(currency, 5)} " if text(currency, 5) else "$"
     if lo and hi:
         return f"{cur}{int(lo):,}-{int(hi):,}"
     return f"{cur}{int(lo or hi):,}"
 
 
 def safe_url(u):
-    return u if isinstance(u, str) and u.startswith("https://") else ""
+    return u if isinstance(u, str) and u.startswith("https://") and len(u) < 2000 else ""
 
 
 def job(source, title, company, location, tags, pay, url, posted):
     return {
-        "title": (title or "").strip(),
-        "company": (company or "").strip(),
-        "location": (location or "").strip() or "Anywhere",
-        "tags": [t for t in (tags or []) if isinstance(t, str)][:6],
-        "salary": pay,
+        "title": text(title),
+        "company": text(company),
+        "location": text(location) or "Anywhere",
+        "tags": [text(t, 40) for t in tags if text(t, 40)][:6] if isinstance(tags, list) else [],
+        "salary": text(pay, 60),
         "url": safe_url(url),
         "source": source,
-        "posted": posted,
+        "posted": posted if isinstance(posted, str) else None,
     }
 
 
@@ -70,7 +86,7 @@ def from_remoteok(data):
 def from_remotive(data):
     return [
         job("Remotive", j.get("title"), j.get("company_name"), j.get("candidate_required_location"),
-            [j.get("category")] if j.get("category") else [], j.get("salary") or "", j.get("url"),
+            [j.get("category")], j.get("salary"), j.get("url"),
             j.get("publication_date"))
         for j in data.get("jobs", [])
     ]
@@ -79,7 +95,7 @@ def from_remotive(data):
 def from_himalayas(data):
     return [
         job("Himalayas", j.get("title"), j.get("companyName"),
-            ", ".join(j.get("locationRestrictions") or []), j.get("categories"),
+            ", ".join(map(text, j.get("locationRestrictions") or [])), j.get("categories"),
             salary(j.get("minSalary"), j.get("maxSalary"), j.get("currency") or ""),
             j.get("applicationLink") or j.get("guid"), iso(j.get("pubDate")))
         for j in data.get("jobs", [])
@@ -112,7 +128,7 @@ def clean(jobs, now=None):
             continue
         try:
             posted = datetime.fromisoformat(j["posted"])
-        except ValueError:
+        except (TypeError, ValueError):
             continue
         if posted.tzinfo is None:  # Remotive dates have no zone; they're UTC.
             posted = posted.replace(tzinfo=timezone.utc)
@@ -143,6 +159,8 @@ def main():
         sys.exit("every source failed; keeping the old jobs.json")
 
     jobs = clean(jobs)
+    if not jobs:  # sources answered but nothing usable: likely an API change
+        sys.exit("no usable jobs after cleaning; keeping the old jobs.json")
     payload = {"updated": datetime.now(timezone.utc).isoformat(), "count": len(jobs), "jobs": jobs}
     # Atomic write: a crash mid-write never leaves a half-written file.
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(OUT), suffix=".tmp")

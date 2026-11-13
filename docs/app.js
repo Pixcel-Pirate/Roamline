@@ -36,10 +36,11 @@ function render() {
   const maxAge = Number($("age").value) * 86400000;
   const paidOnly = $("paid").checked;
   const savedOnly = $("saved").checked;
+  const now = Date.now();
 
   const hits = jobs.filter((j) =>
     (!source || j.source === source) &&
-    Date.now() - new Date(j.posted) <= maxAge &&
+    now - j.time <= maxAge &&
     (!paidOnly || j.salary) &&
     (!savedOnly || saved.has(j.url)) &&
     (!q || `${j.title} ${j.company} ${j.tags.join(" ")}`.toLowerCase().includes(q))
@@ -56,10 +57,9 @@ function render() {
       [j.company, j.location, j.salary, `${j.source}, ${daysAgo(j.posted)}`].filter(Boolean).join(" · ");
     li.querySelector(".tags").textContent = j.tags.join(", ");
     const btn = li.querySelector(".save");
-    const on = saved.has(j.url);
-    btn.textContent = on ? "Saved" : "Save";
-    btn.setAttribute("aria-pressed", String(on));
     btn.dataset.url = j.url;
+    btn.setAttribute("aria-label", `Save ${j.title} at ${j.company || "unknown company"}`);
+    paintSave(btn);
     return li;
   }));
 
@@ -68,13 +68,21 @@ function render() {
     : "No jobs match. Try a broader search.";
 }
 
+function paintSave(btn) {
+  const on = saved.has(btn.dataset.url);
+  btn.textContent = on ? "Saved" : "Save";
+  btn.setAttribute("aria-pressed", String(on));
+}
+
 $("jobs").addEventListener("click", (e) => {
   const btn = e.target.closest(".save");
   if (!btn) return;
   const url = btn.dataset.url;
   saved.has(url) ? saved.delete(url) : saved.add(url);
   storeSaved();
-  render();
+  // Update just this button so keyboard focus stays put; a full re-render
+  // is only needed when "Saved only" would hide the card.
+  $("saved").checked ? render() : paintSave(btn);
 });
 $("filters").addEventListener("input", render);
 $("filters").addEventListener("submit", (e) => e.preventDefault());
@@ -85,7 +93,9 @@ fetch("jobs.json", { cache: "no-cache" })
     return r.json();
   })
   .then((data) => {
-    jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    jobs = (Array.isArray(data.jobs) ? data.jobs : [])
+      .map((j) => ({ ...j, time: Date.parse(j.posted) }))
+      .filter((j) => j.url && !Number.isNaN(j.time));
     for (const s of [...new Set(jobs.map((j) => j.source))].sort()) {
       $("source").append(new Option(s, s));
     }

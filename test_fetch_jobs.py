@@ -1,5 +1,7 @@
 """Run: python3 -m unittest -v"""
 
+import os
+import tempfile
 import unittest
 from datetime import datetime, timezone
 
@@ -37,6 +39,17 @@ class Parsers(unittest.TestCase):
         self.assertEqual(fj.safe_url(None), "")
 
 
+    def test_garbage_fields_do_not_crash(self):
+        data = [{"position": 123, "company": None, "tags": "python", "salary_min": "lots",
+                 "salary_max": True, "url": "https://x.com", "epoch": 10**20}]
+        out = fj.from_remoteok(data)[0]
+        self.assertEqual((out["title"], out["tags"], out["salary"], out["posted"]), ("", [], "", None))
+
+    def test_long_title_capped(self):
+        out = fj.job("S", "x" * 5000, "C", "", [], "", "https://x.com", None)
+        self.assertEqual(len(out["title"]), 200)
+
+
 class Clean(unittest.TestCase):
     def row(self, title, company="Co", posted=RECENT, url="https://x.com"):
         return fj.job("S", title, company, "", [], "", url, fj.iso(posted))
@@ -57,9 +70,31 @@ class Clean(unittest.TestCase):
         fresh = fj.job("Remotive", "New", "C", "", [], "", "https://r.com/n", "2026-11-12T18:00:00")
         self.assertEqual(fj.clean([fresh], NOW), [])
 
+    def test_non_string_date_dropped(self):
+        row = self.row("X")
+        row["posted"] = 12345
+        self.assertEqual(fj.clean([row], NOW), [])
+
     def test_bad_date_dropped(self):
         bad = fj.job("S", "X", "C", "", [], "", "https://x.com", "not a date")
         self.assertEqual(fj.clean([bad], NOW), [])
+
+
+class KeepsOldFile(unittest.TestCase):
+    def test_old_jobs_json_untouched_when_nothing_usable(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "jobs.json")
+            with open(out, "w") as f:
+                f.write("OLD")
+            orig_out, orig_get = fj.OUT, fj.get_json
+            fj.OUT, fj.get_json = out, lambda url: {}  # every source answers, no jobs
+            try:
+                with self.assertRaises(SystemExit):
+                    fj.main()
+            finally:
+                fj.OUT, fj.get_json = orig_out, orig_get
+            with open(out) as f:
+                self.assertEqual(f.read(), "OLD")
 
 
 if __name__ == "__main__":
