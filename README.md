@@ -4,12 +4,13 @@ A free, personal remote-job finder. No accounts, no payments, no tracking.
 
 - `fetch_jobs.py` pulls remote and hybrid jobs once a day from free sources: Remote OK, Remotive, Himalayas, Arbeitnow, Jobicy, The Muse, We Work Remotely, Adzuna and USAJOBS (with free keys), and public company career pages on Greenhouse, Lever and Ashby (listed in `companies.json`). It drops anything older than 30 days or without a safe link, removes duplicates and writes `docs/jobs.json`. Python stdlib only.
 - `docs/` is a static page (search, source and age filters, salary-only, saved jobs in your browser). It renders with `textContent`, never `innerHTML`, and has a strict Content-Security-Policy.
-- `.github/workflows/update-jobs.yml` runs the tests and the fetcher daily and commits the new `jobs.json`. `test.yml` runs the tests on every pull request, and Dependabot keeps the pinned actions updated.
+- `.github/workflows/update-jobs.yml` runs the tests and the fetcher daily and deploys the page to GitHub Pages. `test.yml` runs the tests on every pull request, and Dependabot keeps the pinned actions updated.
 
 ## Set up (free)
-1. Push this repo to GitHub.
-2. Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs`.
-3. Actions → "Update jobs" → Run workflow (it then runs daily by itself).
+1. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+2. Actions → "Update jobs" → Run workflow. It then runs daily and on every push to `main`.
+
+The workflow builds `docs/` with fresh jobs and deploys it to Pages directly; it never commits to `main`, so `main` can be protected by a ruleset. `docs/jobs.json` in the repo is only sample data for running locally.
 
 ## Optional free keys (more jobs + local hybrid jobs)
 Add these in **Settings → Secrets and variables → Actions**. Each one is optional; a source without its key is skipped.
