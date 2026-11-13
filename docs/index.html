@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.zippopotam.us; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>Roamline</title>
 <link rel="stylesheet" href="style.css">
@@ -11,13 +11,20 @@
 <body>
 <header>
   <h1>Roamline</h1>
-  <p>Free remote jobs, refreshed daily. No account, no card, no charges.</p>
+  <p>Free remote and hybrid jobs from many sources, refreshed daily. No account, no card, no charges.</p>
 </header>
 
 <main>
   <form id="filters" role="search">
     <label>Search
       <input id="q" type="search" placeholder="title, company, skill" autocomplete="off">
+    </label>
+    <label>Work type
+      <select id="type">
+        <option value="">Remote and hybrid</option>
+        <option value="remote">Remote only</option>
+        <option value="hybrid">Hybrid only</option>
+      </select>
     </label>
     <label>Source
       <select id="source"><option value="">All sources</option></select>
@@ -33,6 +40,24 @@
     <label class="check"><input id="saved" type="checkbox"> Saved only</label>
   </form>
 
+  <form id="near" class="near">
+    <label>Hybrid near ZIP code
+      <input id="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="e.g. 30303" autocomplete="postal-code">
+    </label>
+    <label>Within
+      <select id="radius">
+        <option value="10">10 miles</option>
+        <option value="25" selected>25 miles</option>
+        <option value="50">50 miles</option>
+        <option value="100">100 miles</option>
+      </select>
+    </label>
+    <button type="submit">Search area</button>
+    <button type="button" id="clear-zip" class="ghost">Clear</button>
+    <p id="zip-msg" class="hint" aria-live="polite"></p>
+  </form>
+  <p class="hint">Your ZIP code is looked up with the free Zippopotam.us service and saved only in this browser.</p>
+
   <noscript><p>Roamline needs JavaScript to search jobs.</p></noscript>
   <p id="status" aria-live="polite">Loading jobs…</p>
   <ul id="jobs"></ul>
@@ -43,7 +68,13 @@
   <a href="https://remoteok.com">Remote OK</a>,
   <a href="https://remotive.com">Remotive</a>,
   <a href="https://himalayas.app">Himalayas</a> and
-  <a href="https://www.arbeitnow.com">Arbeitnow</a>.
+  <a href="https://www.arbeitnow.com">Arbeitnow</a>,
+  <a href="https://jobicy.com">Jobicy</a>,
+  <a href="https://www.themuse.com">The Muse</a>,
+  <a href="https://weworkremotely.com">We Work Remotely</a>,
+  <a href="https://www.adzuna.com">Adzuna</a>,
+  <a href="https://www.usajobs.gov">USAJOBS</a>
+  and public company career pages (Greenhouse, Lever, Ashby).
   Every listing links back to its source. Apply on the original site, and never pay a "recruiter" to get hired.
 </footer>
 
@@ -51,6 +82,7 @@
   <li class="job">
     <div class="top">
       <a class="title" target="_blank" rel="noopener"></a>
+      <span class="kind"></span>
       <button type="button" class="save" aria-pressed="false">Save</button>
     </div>
     <p class="meta"></p>

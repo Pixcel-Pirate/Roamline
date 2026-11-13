@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main]
-    paths: ["fetch_jobs.py", "test_fetch_jobs.py"]
+    paths: ["fetch_jobs.py", "test_fetch_jobs.py", "companies.json"]
 
 # Least privilege: nothing by default; only the job that commits gets write.
 permissions: {}
@@ -27,6 +27,14 @@ jobs:
         run: python3 -m unittest -v
       - name: Fetch jobs
         run: python3 fetch_jobs.py
+        env:
+          # All optional: a source without its key is skipped.
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          USAJOBS_EMAIL: ${{ secrets.USAJOBS_EMAIL }}
+          USAJOBS_KEY: ${{ secrets.USAJOBS_KEY }}
+          SEARCH_ZIPS: ${{ vars.SEARCH_ZIPS }}
+          SEARCH_RADIUS_MILES: ${{ vars.SEARCH_RADIUS_MILES }}
       - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"

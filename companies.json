@@ -1,0 +1,6 @@
+{
+  "_comment": "Company job boards to check for remote/hybrid roles. Add a company by its board name, e.g. boards.greenhouse.io/<name>, jobs.lever.co/<name>, jobs.ashbyhq.com/<name>.",
+  "greenhouse": ["gitlab", "cloudflare", "dropbox", "airbnb", "reddit", "figma", "duolingo", "stripe", "coinbase", "twilio", "datadog", "elastic", "mongodb", "grammarly", "doordash", "pinterest", "instacart", "robinhood", "affirm", "asana"],
+  "lever": ["spotify", "palantir", "plaid"],
+  "ashby": ["ramp", "linear", "notion", "openai", "deel", "vercel", "supabase", "posthog"]
+}
