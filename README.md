@@ -53,6 +53,9 @@ On the page, "Hybrid near ZIP code" shows remote jobs plus hybrid jobs within th
 - **Several searches at once**: separate them with commas, e.g. `support, data analyst`.
 - **My search**: set your filters and press "Save as my search". Roamline opens with it next time and marks jobs posted since your last visit as **New**. Everything is stored only in your browser.
 
+## Auto-fill applications
+The free browser extension in [`extension/`](extension/README.md) fills application forms from a profile saved only in your browser.
+
 ## Add more companies
 Put the company's board name in `companies.json` (the part after `boards.greenhouse.io/`, `jobs.lever.co/` or `jobs.ashbyhq.com/`). A board that doesn't exist just shows as FAILED in the run log.
 

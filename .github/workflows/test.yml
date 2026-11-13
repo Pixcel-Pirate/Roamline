@@ -16,3 +16,4 @@ jobs:
           persist-credentials: false
       - run: python3 -m unittest -v
       - run: node --check docs/app.js
+      - run: node --test extension/fill.test.js
