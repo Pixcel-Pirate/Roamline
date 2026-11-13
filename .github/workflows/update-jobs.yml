@@ -1,36 +1,59 @@
 name: Update jobs
 
+# Builds docs/ with a fresh jobs.json and deploys it straight to GitHub Pages.
+# Nothing is committed to main, so branch protection on main stays intact.
+# If the fetch fails, nothing is deployed and the live site keeps the last good data.
+
 on:
   schedule:
     - cron: "17 6 * * *" # once a day, 06:17 UTC (Remotive asks for at most 4 calls a day)
   workflow_dispatch: {}
   push:
     branches: [main]
-    paths: ["fetch_jobs.py", "test_fetch_jobs.py"]
 
-# Least privilege: nothing by default; only the job that commits gets write.
+# Least privilege: nothing by default; each job asks for what it needs.
 permissions: {}
 
 concurrency:
-  group: update-jobs
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  update:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Test
         run: python3 -m unittest -v
       - name: Fetch jobs
         run: python3 fetch_jobs.py
-      - name: Commit if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/jobs.json
-          git diff --cached --quiet || git commit -m "Update jobs"
-          git push
+        env:
+          # All optional: a source without its key is skipped.
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          USAJOBS_EMAIL: ${{ secrets.USAJOBS_EMAIL }}
+          USAJOBS_KEY: ${{ secrets.USAJOBS_KEY }}
+          SEARCH_ZIPS: ${{ vars.SEARCH_ZIPS }}
+          SEARCH_RADIUS_MILES: ${{ vars.SEARCH_RADIUS_MILES }}
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

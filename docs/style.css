@@ -28,3 +28,16 @@ input[type=search], select { font: inherit; padding: 8px 10px; border: 1px solid
 .save[aria-pressed=true] { background: var(--accent); color: var(--card); }
 footer { padding: 32px 16px 48px; font-size: .85rem; }
 footer a { color: var(--accent); }
+.near { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 8px 0 0; }
+.near label { display: flex; flex-direction: column; font-size: .85rem; gap: 4px; }
+.near input { font: inherit; width: 9em; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+.near button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--card); cursor: pointer; }
+.near button.ghost { background: none; color: var(--accent); }
+.near .hint { flex-basis: 100%; margin: 0; }
+.hint { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+.kind { flex: none; font-size: .75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.kind[data-type=hybrid] { border-color: var(--accent); color: var(--accent); }
+.top .title { flex: 1; }
+.src { color: var(--accent); }
+/* Adzuna's attribution rule: a linked "Adzuna" label at least 116x23px. */
+.src.adzuna { display: inline-flex; align-items: center; justify-content: center; min-width: 116px; min-height: 23px; border: 1px solid var(--accent); border-radius: 4px; text-decoration: none; vertical-align: middle; }
