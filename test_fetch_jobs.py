@@ -35,7 +35,8 @@ class Parsers(unittest.TestCase):
 
     def test_non_https_url_blanked(self):
         self.assertEqual(fj.safe_url("javascript:alert(1)"), "")
-        self.assertEqual(fj.safe_url("http://x.com"), "")
+        self.assertEqual(fj.safe_url("http://x.com"), "https://x.com")
+        self.assertEqual(fj.safe_url(" https://x.com"), "")
         self.assertEqual(fj.safe_url(None), "")
 
 
@@ -48,6 +49,69 @@ class Parsers(unittest.TestCase):
     def test_long_title_capped(self):
         out = fj.job("S", "x" * 5000, "C", "", [], "", "https://x.com", None)
         self.assertEqual(len(out["title"]), 200)
+
+
+class NewSources(unittest.TestCase):
+    def test_jobicy_hourly_salary(self):
+        data = {"jobs": [{"jobTitle": "PT", "companyName": "Kins", "jobGeo": "USA", "jobIndustry": ["Health"],
+                          "pubDate": "2026-11-12T15:48:21+00:00", "salaryMin": 45, "salaryMax": 45,
+                          "salaryCurrency": "USD", "salaryPeriod": "hourly", "url": "https://jobicy.com/jobs/1"}]}
+        self.assertEqual(fj.from_jobicy(data)[0]["salary"], "USD 45/hr")
+
+    def test_wwr_rss(self):
+        xml = b"""<rss><channel><item><title>Acme: Backend Dev</title><region>Anywhere in the World</region>
+            <category>Programming</category><pubDate>Fri, 13 Nov 2026 03:41:36 +0000</pubDate>
+            <link>https://weworkremotely.com/remote-jobs/acme-backend</link></item></channel></rss>"""
+        j = fj.from_wwr(xml)[0]
+        self.assertEqual((j["company"], j["title"], j["posted"][:10]), ("Acme", "Backend Dev", "2026-11-13"))
+
+    def test_muse_keeps_only_remote(self):
+        data = {"results": [
+            {"name": "A", "company": {"name": "C"}, "locations": [{"name": "Flexible / Remote"}],
+             "publication_date": "2026-11-10T00:00:00Z", "refs": {"landing_page": "https://themuse.com/a"}},
+            {"name": "B", "company": {"name": "C"}, "locations": [{"name": "Chicago, IL"}],
+             "publication_date": "2026-11-10T00:00:00Z", "refs": {"landing_page": "https://themuse.com/b"}}]}
+        self.assertEqual([j["title"] for j in fj.from_muse(data)], ["A"])
+
+    def test_adzuna_coords_and_hybrid(self):
+        data = {"results": [{"title": "Analyst (Hybrid)", "company": {"display_name": "X"},
+                             "location": {"display_name": "Austin, TX"}, "latitude": 30.27, "longitude": -97.74,
+                             "redirect_url": "https://www.adzuna.com/land/ad/1", "created": "2026-11-12T10:00:00Z"},
+                            {"title": "Bad coords", "company": {}, "location": {}, "latitude": 999, "longitude": "x",
+                             "redirect_url": "https://www.adzuna.com/land/ad/2", "created": "2026-11-12T10:00:00Z"}]}
+        a, b = fj.from_adzuna(data, "remote")
+        self.assertEqual((a["type"], a["lat"], a["lon"]), ("hybrid", 30.27, -97.74))
+        self.assertNotIn("lat", b)
+        self.assertEqual(b["type"], "remote")
+
+    def test_usajobs(self):
+        data = {"SearchResult": {"SearchResultItems": [{"MatchedObjectDescriptor": {
+            "PositionTitle": "IT Specialist", "OrganizationName": "VA", "PositionURI": "https://www.usajobs.gov/job/1",
+            "PositionLocation": [{"LocationName": "Anywhere in the U.S. (remote job)"}],
+            "PublicationStartDate": "2026-11-01T00:00:00.0000",
+            "PositionRemuneration": [{"MinimumRange": "80000.0", "MaximumRange": "104000.0"}]}}]}}
+        j = fj.from_usajobs(data)[0]
+        self.assertEqual((j["title"], j["salary"]), ("IT Specialist", "$80,000-104,000"))
+
+    def test_company_boards_skip_onsite(self):
+        gh = {"jobs": [{"title": "SRE", "location": {"name": "Remote, United States"}, "company_name": "GitLab",
+                        "absolute_url": "https://job-boards.greenhouse.io/gitlab/1", "first_published": "2026-11-01T00:00:00-04:00"},
+                       {"title": "Chef", "location": {"name": "San Francisco"},
+                        "absolute_url": "https://job-boards.greenhouse.io/gitlab/2", "first_published": "2026-11-01T00:00:00-04:00"}]}
+        self.assertEqual([j["title"] for j in fj.from_greenhouse("gitlab", gh)], ["SRE"])
+        lever = [{"text": "AE", "hostedUrl": "https://jobs.lever.co/spotify/1", "workplaceType": "hybrid",
+                  "categories": {"location": "New York, NY", "team": "Sales"}, "createdAt": 1792767640768}]
+        j = fj.from_lever("spotify", lever)[0]
+        self.assertEqual((j["type"], j["company"], j["posted"][:4]), ("hybrid", "Spotify", "2026"))
+        ashby = {"jobs": [{"title": "Eng", "location": "NYC", "isRemote": True, "workplaceType": "Remote",
+                           "jobUrl": "https://jobs.ashbyhq.com/ramp/1", "publishedAt": "2026-11-01T00:00:00Z"}]}
+        self.assertEqual(fj.from_ashby("ramp", ashby)[0]["type"], "remote")
+
+    def test_settings_validates_zips_and_radius(self):
+        self.assertEqual(fj.settings({"SEARCH_ZIPS": "10001, 9410, abcde,94103;x", "SEARCH_RADIUS_MILES": "500"}),
+                         (["10001"], 100))
+        self.assertEqual(fj.settings({"SEARCH_ZIPS": "10001,94103", "SEARCH_RADIUS_MILES": "nope"}),
+                         (["10001", "94103"], 30))
 
 
 class Clean(unittest.TestCase):
@@ -86,13 +150,15 @@ class KeepsOldFile(unittest.TestCase):
             out = os.path.join(d, "jobs.json")
             with open(out, "w") as f:
                 f.write("OLD")
-            orig_out, orig_get = fj.OUT, fj.get_json
-            fj.OUT, fj.get_json = out, lambda url: {}  # every source answers, no jobs
+            saved = fj.OUT, fj.get_json, fj.fetch, fj.PAUSE
+            fj.OUT, fj.PAUSE = out, 0
+            fj.get_json = lambda url, headers=None: {}  # every JSON source answers, no jobs
+            fj.fetch = lambda url, headers=None: b"<rss><channel></channel></rss>"
             try:
                 with self.assertRaises(SystemExit):
                     fj.main()
             finally:
-                fj.OUT, fj.get_json = orig_out, orig_get
+                fj.OUT, fj.get_json, fj.fetch, fj.PAUSE = saved
             with open(out) as f:
                 self.assertEqual(f.read(), "OLD")
 
