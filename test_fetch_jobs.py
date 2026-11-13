@@ -99,6 +99,29 @@ class NewSources(unittest.TestCase):
                            "jobUrl": "https://jobs.ashbyhq.com/ramp/1", "publishedAt": "2026-11-01T00:00:00Z"}]}
         self.assertEqual(fj.from_ashby("ramp", ashby)[0]["type"], "remote")
 
+    def test_working_nomads(self):
+        data = [{"url": "https://www.workingnomads.com/job/go/1/", "title": "Senior React Dev", "company_name": "Lemon",
+                 "category_name": "Development", "tags": "react,python", "location": "Europe",
+                 "pub_date": "2026-11-12T06:47:52-05:00"}]
+        j = fj.from_working_nomads(data)[0]
+        self.assertEqual((j["tags"], j["level"]), (["react", "python", "Development"], "senior"))
+        self.assertEqual(fj.from_working_nomads({"not": "a list"}), [])
+
+    def test_levels(self):
+        cases = {
+            "Senior Software Engineer": "senior", "Sr. Data Analyst": "senior", "Data Engineer III": "senior",
+            "Staff Engineer": "lead", "Director of Sales": "lead", "Head of Design": "lead", "Team Lead": "lead",
+            "Junior Developer": "entry", "Marketing Intern": "entry", "Engineer I": "entry",
+            "Software Engineer II": "mid", "Mid-level QA": "mid",
+            "Account Executive": "", "Lead Generation Specialist": "", "Staff Accountant": "",
+            "Customer Support Rep": "",
+        }
+        for title, want in cases.items():
+            self.assertEqual(fj.level_of(title), want, title)
+        self.assertEqual(fj.level_of("Designer", ["Entry-level"]), "entry")
+        self.assertEqual(fj.level_of("Designer", ["Executive"]), "lead")
+        self.assertEqual(fj.level_of("Designer", "not a list"), "")
+
     def test_settings_validates_zips_and_radius(self):
         self.assertEqual(fj.settings({"SEARCH_ZIPS": "10001, 9410, abcde,94103;x", "SEARCH_RADIUS_MILES": "500"}),
                          (["10001"], 100))

@@ -5,6 +5,10 @@
 const $ = (id) => document.getElementById(id);
 const SAVED_KEY = "roamline-saved";
 const AREA_KEY = "roamline-area";
+const SEARCH_KEY = "roamline-search";
+const VISIT_KEY = "roamline-last-visit";
+const FILTERS = ["q", "type", "level", "source", "age", "paid", "fresh"]; // what "my search" remembers
+const LEVEL_NAME = { entry: "Entry", mid: "Mid", senior: "Senior", lead: "Lead" };
 const LIMIT = 200; // ponytail: render cap, add paging if people scroll past 200
 const SOURCE_HOME = {
   "Remote OK": "https://remoteok.com",
@@ -13,6 +17,7 @@ const SOURCE_HOME = {
   Arbeitnow: "https://www.arbeitnow.com",
   Jobicy: "https://jobicy.com",
   "We Work Remotely": "https://weworkremotely.com",
+  "Working Nomads": "https://www.workingnomads.com",
   Adzuna: "https://www.adzuna.com",
   USAJOBS: "https://www.usajobs.gov",
 };
@@ -20,6 +25,7 @@ const SOURCE_HOME = {
 let jobs = [];
 let saved = loadSaved();
 let area = loadArea(); // {zip, lat, lon, city, state} or null
+const lastVisit = startVisit(); // jobs posted after this are "new"
 
 function loadSaved() {
   try {
@@ -34,6 +40,46 @@ function storeSaved() {
     localStorage.setItem(SAVED_KEY, JSON.stringify([...saved]));
   } catch {
     /* storage blocked: saving just won't persist */
+  }
+}
+
+function readJSON(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null; // private mode or corrupt value
+  }
+}
+
+function writeJSON(key, value) {
+  try {
+    value === null ? localStorage.removeItem(key) : localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage blocked: it just won't persist */
+  }
+}
+
+// Returns when the previous visit started (0 on a first visit). Reloads within
+// an hour count as the same visit, so "new" jobs don't vanish on refresh.
+function startVisit() {
+  const v = readJSON(VISIT_KEY);
+  const prev = Number(v && v.prev) || 0;
+  const current = Number(v && v.current) || 0;
+  const now = Date.now();
+  if (now - current < 3600e3) return prev;
+  writeJSON(VISIT_KEY, { prev: current, current: now });
+  return current;
+}
+
+function getFilters() {
+  return Object.fromEntries(FILTERS.map((id) => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value]));
+}
+
+function setFilters(f) {
+  for (const id of FILTERS) {
+    if (!(id in f)) continue;
+    if ($(id).type === "checkbox") $(id).checked = f[id] === true;
+    else if (typeof f[id] === "string") $(id).value = f[id];
   }
 }
 
@@ -80,7 +126,9 @@ function daysAgo(iso) {
 }
 
 function render() {
-  const q = $("q").value.trim().toLowerCase();
+  const terms = $("q").value.toLowerCase().split(",").map((t) => t.trim()).filter(Boolean);
+  const level = $("level").value;
+  const freshOnly = $("fresh").checked;
   const source = $("source").value;
   const maxAge = Number($("age").value) * 86400000;
   const paidOnly = $("paid").checked;
@@ -92,11 +140,13 @@ function render() {
   const hits = jobs.filter((j) =>
     (!source || j.source === source) &&
     (!type || j.type === type) &&
+    (!level || j.level === level) &&
+    (!freshOnly || j.time > lastVisit) &&
     (!area || j.type === "remote" || isNear(j, radius)) &&
     now - j.time <= maxAge &&
     (!paidOnly || j.salary) &&
     (!savedOnly || saved.has(j.url)) &&
-    (!q || `${j.title} ${j.company} ${j.tags.join(" ")}`.toLowerCase().includes(q))
+    (!terms.length || terms.some((t) => j.haystack.includes(t)))
   );
 
   const list = $("jobs");
@@ -106,6 +156,8 @@ function render() {
     const a = li.querySelector(".title");
     a.textContent = j.title;
     a.href = j.url; // fetcher already dropped anything that isn't https://
+    li.querySelector(".new").hidden = !(lastVisit && j.time > lastVisit);
+    li.querySelector(".lvl").textContent = LEVEL_NAME[j.level] || "";
     li.querySelector(".kind").textContent = j.type === "hybrid" ? "Hybrid" : "Remote";
     li.querySelector(".kind").dataset.type = j.type;
     const meta = li.querySelector(".meta");
@@ -126,9 +178,10 @@ function render() {
     return li;
   }));
 
-  const where = area ? ` · hybrid within ${radius} mi of ${area.city}, ${area.state}` : "";
+  const fresh = lastVisit ? hits.filter((j) => j.time > lastVisit).length : 0;
+  const where = (fresh ? ` · ${fresh} new since your last visit` : "") + (area ? ` · hybrid within ${radius} mi of ${area.city}, ${area.state}` : "");
   $("status").textContent = (hits.length
-    ? `${hits.length} jobs${hits.length > LIMIT ? `, showing the newest ${LIMIT}` : ""}`
+    ? `${hits.length} ${hits.length === 1 ? "job" : "jobs"}${hits.length > LIMIT ? `, showing the newest ${LIMIT}` : ""}`
     : "No jobs match. Try a broader search.") + where;
 }
 
@@ -175,6 +228,16 @@ $("near").addEventListener("submit", async (e) => {
   }
 });
 
+$("save-search").addEventListener("click", () => {
+  writeJSON(SEARCH_KEY, getFilters());
+  $("mine-msg").textContent = "Saved. Roamline will open with this search next time.";
+});
+
+$("forget-search").addEventListener("click", () => {
+  writeJSON(SEARCH_KEY, null);
+  $("mine-msg").textContent = "Forgot your saved search.";
+});
+
 $("clear-zip").addEventListener("click", () => {
   area = null;
   storeArea();
@@ -196,10 +259,19 @@ fetch("jobs.json", { cache: "no-cache" })
   })
   .then((data) => {
     jobs = (Array.isArray(data.jobs) ? data.jobs : [])
-      .map((j) => ({ ...j, time: Date.parse(j.posted) }))
+      .map((j) => ({
+        ...j,
+        time: Date.parse(j.posted),
+        haystack: `${j.title} ${j.company} ${(j.tags || []).join(" ")}`.toLowerCase(),
+      }))
       .filter((j) => j.url && !Number.isNaN(j.time));
     for (const s of [...new Set(jobs.map((j) => j.source))].sort()) {
       $("source").append(new Option(s, s));
+    }
+    const mine = readJSON(SEARCH_KEY);
+    if (mine && typeof mine === "object") {
+      setFilters(mine);
+      $("mine-msg").textContent = "Showing your saved search.";
     }
     render();
     $("status").textContent += ` · updated ${daysAgo(data.updated)}`;

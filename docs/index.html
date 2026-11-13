@@ -17,13 +17,22 @@
 <main>
   <form id="filters" role="search">
     <label>Search
-      <input id="q" type="search" placeholder="title, company, skill" autocomplete="off">
+      <input id="q" type="search" placeholder="e.g. support, data analyst, python" autocomplete="off" aria-describedby="q-hint">
     </label>
     <label>Work type
       <select id="type">
         <option value="">Remote and hybrid</option>
         <option value="remote">Remote only</option>
         <option value="hybrid">Hybrid only</option>
+      </select>
+    </label>
+    <label>Experience
+      <select id="level">
+        <option value="">Any level</option>
+        <option value="entry">Entry / junior</option>
+        <option value="mid">Mid-level</option>
+        <option value="senior">Senior</option>
+        <option value="lead">Lead / principal / director</option>
       </select>
     </label>
     <label>Source
@@ -38,6 +47,13 @@
     </label>
     <label class="check"><input id="paid" type="checkbox"> Shows salary</label>
     <label class="check"><input id="saved" type="checkbox"> Saved only</label>
+    <label class="check"><input id="fresh" type="checkbox"> New since last visit</label>
+    <p id="q-hint" class="hint">Separate several searches with commas to match any of them.</p>
+    <div class="mine">
+      <button type="button" id="save-search">Save as my search</button>
+      <button type="button" id="forget-search" class="ghost">Forget my search</button>
+      <span id="mine-msg" class="hint" aria-live="polite"></span>
+    </div>
   </form>
 
   <form id="near" class="near">
@@ -71,6 +87,7 @@
   <a href="https://www.arbeitnow.com">Arbeitnow</a>,
   <a href="https://jobicy.com">Jobicy</a>,
   <a href="https://weworkremotely.com">We Work Remotely</a>,
+  <a href="https://www.workingnomads.com">Working Nomads</a>,
   <a href="https://www.adzuna.com">Adzuna</a>,
   <a href="https://www.usajobs.gov">USAJOBS</a>
   and public company career pages (Greenhouse, Lever, Ashby).
@@ -81,7 +98,7 @@
   <li class="job">
     <div class="top">
       <a class="title" target="_blank" rel="noopener"></a>
-      <span class="kind"></span>
+      <span class="badges"><span class="new" hidden>New</span><span class="lvl"></span><span class="kind"></span></span>
       <button type="button" class="save" aria-pressed="false">Save</button>
     </div>
     <p class="meta"></p>

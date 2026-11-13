@@ -41,3 +41,11 @@ footer a { color: var(--accent); }
 .src { color: var(--accent); }
 /* Adzuna's attribution rule: a linked "Adzuna" label at least 116x23px. */
 .src.adzuna { display: inline-flex; align-items: center; justify-content: center; min-width: 116px; min-height: 23px; border: 1px solid var(--accent); border-radius: 4px; text-decoration: none; vertical-align: middle; }
+.mine { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mine button { font: inherit; font-size: .9rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--card); cursor: pointer; }
+.mine button.ghost { background: none; color: var(--accent); }
+#q-hint { flex-basis: 100%; margin: 0; }
+.badges { display: flex; gap: 6px; flex: none; align-items: center; }
+.lvl:empty { display: none; }
+.lvl { font-size: .75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.new { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--card); font-weight: 600; }
